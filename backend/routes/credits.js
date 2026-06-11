@@ -93,3 +93,35 @@ router.post('/bulk', async (req, res) => {
         errors.push({ pensionerId: entry.pensionerId, reason: entryErr.message });
       }
     }
+    res.status(201).json({
+      success: true,
+      saved: results.length,
+      failed: errors.length,
+      errors,
+      data: results,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/credits — single credit entry
+router.post('/', async (req, res) => {
+  try {
+    const { pensionerId, month, year, amountCredited, remarks, enteredBy } = req.body;
+    const financialYear = computeFinancialYear(parseInt(month), parseInt(year));
+
+    const credit = await PensionCredit.findOneAndUpdate(
+      { pensionerId, month: parseInt(month), year: parseInt(year) },
+      { amountCredited, financialYear, creditDate: new Date(), status: 'Success', remarks, enteredBy, lastUpdated: new Date() },
+      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    res.status(201).json({ success: true, data: credit });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+module.exports = router;
+
